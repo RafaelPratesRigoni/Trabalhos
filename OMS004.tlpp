@@ -1,0 +1,44 @@
+#Include 'Protheus.ch'
+#Include 'Totvs.ch'
+// testes
+User Function OMSY004()
+
+Local oDlg1
+Local oSay,oSay1,oSay3
+Local oButton1
+Local oTGet,oTGet1,oTGet3
+Local cGet1 := Space(6)
+Local cGet2 := Space(15)
+Local cGet3 
+
+oDlg1:= TDialog():New(0,0,300,750,'Manutencao Cargas/Pedidos',,,,,CLR_BLACK,CLR_WHITE,,,.T.)
+
+oSay  := TSay():New(10, 10 , {|| 'Carga' }    , oDlg1, , , , , , .T., CLR_BLACK, CLR_WHITE, 40 , 20)
+oSay3 := TSay():New(10, 150, {|| 'Descricao' }, oDlg1, , , , , , .T., CLR_BLUE , CLR_WHITE, 300, 20)
+oSay1 := TSay():New(10, 65 , {|| 'Produto' }  , oDlg1, , , , , , .T., CLR_BLACK, CLR_WHITE, 40 , 20)
+
+oTGet  := TGet():New(20, 10 , {|u|IIF(Pcount()>0,cGet1:=u,cGet1)}                       , oDlg1, 40, 10, "@!", , 0, , , .F., , .T., , .F., , .F., .F., , .F., .F., , cGet1, , , ,)
+oTGet1 := TGet():New(20, 65 , {|u|IIF(Pcount()>0,cGet2:=u,cGet2)}                       , oDlg1, 70, 10, "@!", , 0, , , .F., , .T., , .F., , .F., .F., , .F., .F., , cGet2, , , ,)
+oTGet3 := TGet():New(20, 150, {||Posicione("SB1",1,xFilial("SB1")+M->cGet2, 'B1_DESC' )}, oDlg1, 96, 10, "@!", , 0, , , .F., , .T., , .F., , .F., .F., , .F., .F., , cGet3, , , ,)
+
+oTGet:cF3 := "DAK"
+oTGet1:cF3 :="SC9"
+
+oButton1:=TButton():New(60, 10, "Bloquear ", oDlg1,{|| fBloq(cGet1,cGet2)}, 60,15,,,.F.,.T.,.F.,,.F.,,,.F. )
+
+oDlg1:Activate(,,,.T.)
+
+Return
+
+Static Function fBloq(cCod,cPro)
+
+dbSelectArea("SC9")
+SC9->(dbSeek(xFilial("SC9")+Alltrim(cCod)+Alltrim(cPro)))		
+		RecLock("SC9",.F.)  
+		
+			dbDelete() //função responsável pela deleção lógica
+		MsgInfo( "O Produto "+cPro+" da Carga "+cCod+" Serao Bloqueados")
+        MsUnlock()
+		
+	
+return
