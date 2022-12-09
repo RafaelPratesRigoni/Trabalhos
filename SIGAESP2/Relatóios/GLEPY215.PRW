@@ -104,6 +104,7 @@ Static Function C110PC(lEnd,WnRel,cString,nReg)
 	cQueryCad += "  WHERE ZLD_DTCOLE  BETWEEN '" + DtoS(MV_PAR01) + "' AND '" + DtoS(MV_PAR02) + "' "
 	cQueryCad += "  AND ZLD_SETOR = '000002'"
 	cQueryCad += "  AND A.A2_EST ='MG' "
+	cQueryCad += "  AND D.D_E_L_E_T_ =' ' "
 	cQueryCad += "  GROUP BY ZLD_LINROT, A2_MUN, ZLD_FILIAL, ZLD_RETIRO, ZLD_RETILJ, ZLD_DESLIN, ZLD_SETOR "
 	cQueryCad += "  ORDER BY ZLD_LINROT,ZLD_RETIRO "
 
