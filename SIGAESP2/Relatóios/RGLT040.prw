@@ -133,8 +133,8 @@ EndDo
 If !_lAcerto
 	DEFINE CELL NAME Alltrim(_cEveINSS)	OF oDetalhe ALIAS ""  	TITLE "Funrural" PICTURE "@E 99,999.9999"  SIZE 14
 ELSE
-	// VlrFunrural()
-	// If _nFunrural > 0
+	// VlrFunrural() 
+	// If _nFunrural > 0 
 		DEFINE CELL NAME "FUNRURAL"	OF oDetalhe ALIAS ""  	TITLE "Funrural" PICTURE "@E 999,999.99"  SIZE 14
 	// EndIf
 	// If _nFundesa > 0
