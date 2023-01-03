@@ -80,7 +80,7 @@ User Function MGLT032(xCodMIX,xProd,xLoja,xObj)
 	EndIf
 
 	cTexto := "Esta rotina tem o objetivo de efetuar o Fechamento Financeiro dos Produtores."+_ENTER
-	cTexto += "Por favor preencha os parÂmetros da rotina antes de executar."+_ENTER
+	cTexto += "Por favor preencha os parametros da rotina antes de executar."+_ENTER
 	cTexto += " "+_ENTER
 
 	If !_lAuto
@@ -111,43 +111,43 @@ Return _nTotDebito
 */
 Static Function FechFin(oObj)
 
-	Local cFunc 	 := "1"
-	Local cArqTmp  := cGLTalias+cFunc
-	Local nCont    := 1
+	Local cFunc        := "1"
+	Local cArqTmp      := cGLTalias+cFunc
+	Local nCont        := 1
 	Local cxForn
 	Local cxLoja
-	Local aStruct := {}
-	Local _nTamFil    := TamSx3("A2_FILIAL")[1]
-	Local _nTamFor    := TamSx3("A2_COD")[1]
-	Local _nTamLoj    := TamSx3("A2_LOJA")[1]
-	Local _lAglutina := SuperGetMV("LT_AGLUTINA",,.F.) //Parametro que indica se o sistema devera gerar titulos aglutinados de creditos e debitos
+	Local aStruct      := {}
+	Local _nTamFil     := TamSx3("A2_FILIAL")[1]
+	Local _nTamFor     := TamSx3("A2_COD")[1]
+	Local _nTamLoj     := TamSx3("A2_LOJA")[1]
+	Local _lAglutina   := SuperGetMV("LT_AGLUTINA",,.F.) //Parametro que indica se o sistema devera gerar titulos aglutinados de creditos e debitos
 	Local nProd
-	Local oTempTable	:= Nil
-	Private _cMotBaixa := AllTrim(GETMV("LT_MOTBX"))  //Motivo de baixa utilizado para a rotina do Leite
-	Private _cEveCred := AllTrim(SuperGETMV("LT_EVECRED",,"300001")) //Evento utilizado no titulo aglutinado de credito
-	Private _cEveDeb := AllTrim(SuperGETMV("LT_EVEDEB",,"300002")) //Evento utilizado no titulo aglutinado de debito
-	Private lContinue 	:= .T.
-	Private lDeuErro	:= .F.
-	Private _cEveFunr := AllTrim(GetMv("LT_EVEINSS")) //Codigo do evento de INSS (Funrural)
-	Private _cMes := ""
-	Private _cAno := ""
+	Local oTempTable   := Nil
+	Private _cMotBaixa := AllTrim(GETMV("LT_MOTBX")) //Motivo de baixa utilizado para a rotina do Leite
+	Private _cEveCred  := AllTrim(SuperGETMV("LT_EVECRED",,"300001")) //Evento utilizado no titulo aglutinado de credito
+	Private _cEveDeb   := AllTrim(SuperGETMV("LT_EVEDEB",,"300002")) //Evento utilizado no titulo aglutinado de debito
+	Private lContinue  := .T.
+	Private lDeuErro   := .F.
+	Private _cEveFunr  := AllTrim(GetMv("LT_EVEINSS")) //Codigo do evento de INSS (Funrural)
+	Private _cMes      := ""
+	Private _cAno      := ""
 	Private _nReg
-	Private _cVencto  	:= "" //Dia de vencimento dos titulos
-	Private cCodMIX := MV_PAR01
-	Private _cProdDe  	:= mv_par02
-	Private _cProdAte 	:= mv_par03
-	Private _cGrpDe  	:= mv_par04
-	Private _cGrpAte 	:= mv_par05
-	Private _cLojaDe 	:= mv_par06
-	Private _cLojaAte 	:= mv_par06
-	Private _cSetor := ""
-	Private _dDtBaixa := dDataBase
-	Private _cMaxEmis	:= ""//DTOS(LASTDAY(ADDMES(DDATABASE,-1)))
-	Private _aCred := {}
-	Private _lGrvCred := .T.
-	Private _lGrvDeb := .T.
-	Private _cNumTit := ""
-	Private _dBkpDtBa := dDataBase
+	Private _cVencto   := "" //Dia de vencimento dos titulos
+	Private cCodMIX    := MV_PAR01
+	Private _cProdDe   := mv_par02
+	Private _cProdAte  := mv_par03
+	Private _cGrpDe    := mv_par04
+	Private _cGrpAte   := mv_par05
+	Private _cLojaDe   := mv_par06
+	Private _cLojaAte  := mv_par06
+	Private _cSetor    := ""
+	Private _dDtBaixa  := dDataBase
+	Private _cMaxEmis  := "" //DTOS(LASTDAY(ADDMES(DDATABASE,-1)))
+	Private _aCred     := {}
+	Private _lGrvCred  := .T.
+	Private _lGrvDeb   := .T.
+	Private _cNumTit   := ""
+	Private _dBkpDtBa  := dDataBase
 
 	dbSelectArea("ZLE")
 	ZLE->(dbSetOrder(1))
@@ -932,10 +932,10 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 			cQry += " AND A2_FILIAL = '" + xFilial("SA2") + "'"
 			cQry += " AND A2_L_TPFOR = 'P'" //Produtor Cooperado
 			cQry += " AND A2_COD     BETWEEN '" + _cProdDe +"' AND '"+ _cProdAte +"'"
-			cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
-			// If !Empty(_cLojaaut)
-			// 	cQry += " AND A2_LOJA = '" + _cLojaaut +"' "
-			// EndIf
+//			cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
+			If !Empty(_cLojaaut)
+				cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
+			EndIf
 			cQry += " AND A2_L_LI_RO BETWEEN '" + _cGrpDe + "' AND '" + _cGrpAte + "' "
 
 			cQry += " ORDER BY A2_COD "
@@ -998,7 +998,7 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 			//³ Busca DŽbitos do Cooperado       ³
 			//ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 		Case cOpc == "3"
-			cQry := "SELECT 'SE1' AS TIPOTIT,E1_FILIAL as FILIAL,E1_PREFIXO as PREFIXO,E1_NUM AS NUM,E1_PARCELA AS PARCELA,E1_TIPO AS TIPO,E1_CLIENTE AS A2COD,E1_LOJA AS A2LOJA "
+			cQry := "SELECT DISTINCT 'SE1' AS TIPOTIT,E1_FILIAL as FILIAL,E1_PREFIXO as PREFIXO,E1_NUM AS NUM,E1_PARCELA AS PARCELA,E1_TIPO AS TIPO,E1_CLIENTE AS A2COD,E1_LOJA AS A2LOJA "
 			cQry += ",E1_VENCTO AS VENCTO,E1_VALOR AS VLRORI, E1_SALDO AS SALDO , E1_ACRESC AS ACRESC, E1_DECRESC AS DECRESC, E1_SDACRES AS SDACRES , E1_SDDECRE AS SDDECRE,E1_L_EVENT AS EVENTO, E1_HIST AS HIST  "
 			cQry += ", SE1.R_E_C_N_O_, ZL8.ZL8_PRIORI AS PRIORIDADE " //Inclusao de prioridade seguindo ordem definida no cadastro de eventos.
 			cQry += " FROM " + RetSqlName("SE1") + " SE1 "
@@ -1006,8 +1006,8 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 			cQry += " 			JOIN " + RetSqlName("SA2") + " A2 ON A2.A2_COD = SE1.E1_CLIENTE AND A2.D_E_L_E_T_ = ' ' " //AND A2.A2_LOJA = SE1.E1_LOJA
 			cQry += " WHERE "
 			cQry += " E1_FILIAL  	BETWEEN '    ' AND 'ZZZZ'"
-			cQry += " AND E1_CLIENTE  	=  '" + SA2->A2_COD +"' "
-			cQry += " AND E1_LOJA    	=  '" + SA2->A2_LOJA +"' "
+			cQry += " AND E1_CLIENTE  	=  '" + SA2->A2_COD + "' "
+			// cQry += " AND E1_LOJA    	 BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
 			cQry += " AND E1_VENCTO 	<= '"  + _cVencto  + "'"
 			cQry += " AND E1_TIPO <> 'NCC' "
 			cQry += " AND E1_SALDO 		> 0 "
@@ -1019,6 +1019,7 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 				cQry += " AND ( E1_PREFIXO+E1_NUM <> 'GL2"+_cNumTit+"') "
 			EndIf
 			cQry += " AND SE1.D_E_L_E_T_ = ' ' "
+	       
 
 
 			If !_lGeraFin //Se não gerou financeiro nos convênios, busca tabela ZLL para apurar débitos a descontar e gerar títulos no valor a descontar.
@@ -1035,7 +1036,7 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 				cQry += " FROM " + RetSqlName("ZLL") + " ZLL "
 				cQry += "	 JOIN " + RetSqlName("ZL8") + " ZL8 ON ZL8.ZL8_COD = ZLL.ZLL_EVENTO AND ZL8.D_E_L_E_T_ = ' ' "
 				cQry += " AND ZLL_RETIRO  	=  '" + SA2->A2_COD +"' "
-				cQry += " AND ZLL_RETILJ  	=  '" + SA2->A2_LOJA +"' "
+//				cQry += " AND ZLL_RETILJ  	=  '" + SA2->A2_LOJA +"' "
 				cQry += " AND ZLL_VENCTO 	<= '"  + _cVencto  + "'"
 				cQry += " AND ZLL_STATUS	= 'A' "
 				cQry += " AND ZLL_DATA	<= '" + _cMaxEmis + "' "
