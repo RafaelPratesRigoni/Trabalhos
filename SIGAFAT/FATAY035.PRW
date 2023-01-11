@@ -53,12 +53,13 @@ Static Function FATAY035B(oSay)
 	//**********************************************************************
 	//* Mostra as NF não transmitdas vinculadas as Carga.
 	//**********************************************************************
+	cLogs += + chr(10) + chr(13) + "As Notas Fiscais abaixo foram  Recusadas ou não Transmitidas."
 	If Len(aDados) > 0
 		For nI := 1 to Len(aDados)
-			cLogs  += + chr(10)+chr(13) + cId + "-"  + aDados[nI][1] + "-"+ aDados[nI][2] + "-" + aDados[nI][3]
+			cLogs  += + chr(10)+chr(13) + cId + "-"  + aDados[nI][1] + "-" + aDados[nI][2]
 			cId:= Soma1(cId)
 		Next
-		cLogs += "Deseja Continuar ?"
+		cLogs += + chr(10)+chr(13) + "Deseja Continuar?"
 		lExecute := MsgYesNo(cLogs,"Antenção! Inconsistências Encontradas.")
 	Else
 		lExecute :=.T.
@@ -173,24 +174,27 @@ Static Function FATAY035B(oSay)
 
 
 			cFilant :=  cFilOld
-			//else //menssagem COM AS NOTAS NÃO TRANSMITIDAS
+			
 		EndIf
 
 	EndIF
 
 	DbSelectArea('SC5')
 	DbSetOrder(1)
-	MsgInfo("Iniciando Transmissão Nota Fiscal de Transferencia")
+	//MsgInfo("Iniciando Transmissão Nota Fiscal de Transferencia")
 	If lRet
+	  cFilOld := cFilant 
 		For x2 := 1 to Len(aPeds)
 			IF SC5->(DbSeek(aPeds[x2][1]+ aPeds[x2][2]))
-				MsgYesNo("Pedido Transferencia gravado com o código " + SC5->C5_NUM + ". Deseja REalizar o Faturamento do pedido? Em caso negativo, o pedido deverá ser faturado utilizando a rotina PEDIDOS DE VENDA no módulo FATURAMENTO.")
+				MsgYesNo("Pedido Transferencia gravado com o Filial - "+ SC5->C5_FILIAL + " - Código - " + SC5->C5_NUM + ". Deseja Realizar o Faturamento do pedido? Em caso negativo, o pedido deverá ser faturado utilizando módulo FATURAMENTO.")
+				cFilant := aPeds[x2][1]
 				cFunName := FunName()
 				SetFunName("MATA410")
 				Processa({||Ma410PvNfs("SC5", SC5->(Recno()))},"Gerando a nota fiscal.","Processando aguarde...", .F.)
 				SetFunName(cFunName)
 			EndIf
 		Next
+		cFilant :=  cFilOld
 	EndIf
 	// RecLock(cAlias, bInsert)
 
@@ -253,12 +257,15 @@ Static Function FATAY035A()
 	While (cAliasPrd)->(!Eof())
 		IF (cAliasPrd)->CODRSEF = '100'
 			aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH})
-			(cAliasPrd)->(DbSkip())
-		ELSE
-			aadd(aDados,{(cAliasPrd)->SERIE,(cAliasPrd)->NFISCAL,(cAliasPrd)->C9_PRODUTO})
-			(cAliasPrd)->(DbSkip())
+		
+		ELSE 
+			IF aScan(aDados,{|x|Alltrim(x[1])==(cAliasPrd)->SERIE .and. Alltrim(x[2])==(cAliasPrd)->NFISCAL}) == 0
+			aadd(aDados,{(cAliasPrd)->SERIE,(cAliasPrd)->NFISCAL})
+			
+			ENDIF
 
 		ENDIF
+		(cAliasPrd)->(DbSkip())
 	ENDDO
 
 	(cAliasPrd)->(DBCloseArea())
