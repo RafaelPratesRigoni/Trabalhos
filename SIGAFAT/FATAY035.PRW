@@ -41,6 +41,7 @@ Static Function FATAY035B(oSay)
 	Local cLogs      := "Ocorreram inconsistências durante a Execução do Pedido de Transferencia."
 	Local cId 	     := StrZero(1,3)
 	Local lExecute	 := .F.
+	Local lExecNfe	 := .F.
 	Local cPeds      := ""
 	Private aProds   := {}
 	Private aDados	 := {}
@@ -139,6 +140,7 @@ Static Function FATAY035B(oSay)
 					cFilant := cFilProd
 
 					MSExecAuto({|a, b, c, d| MATA410(a, b, c, d)}, aCabec, aItens, nOpcX, .F.)
+					
 					If lMsErroAuto
 						MostraErro()
 						aErroAuto := GetAutoGRLog()
@@ -172,6 +174,15 @@ Static Function FATAY035B(oSay)
 
 			End Transaction
 
+			DbSelectArea('DAK')
+			DbSetOrder(1)
+			If DAK->(DbSeek(xFilial( 'DAK' )+(cAliasPrd)->DAK_COD))
+				Reclock("DAK", .F.)
+				DAK->DAK_YTRANS := "1"
+				DAK->DAK_YPTRAN := cPeds
+				DAK->(MsUnlock())
+			EndIf
+
 
 			cFilant :=  cFilOld
 			
@@ -184,18 +195,24 @@ Static Function FATAY035B(oSay)
 	//MsgInfo("Iniciando Transmissão Nota Fiscal de Transferencia")
 	If lRet
 	  cFilOld := cFilant 
+	  
 		For x2 := 1 to Len(aPeds)
 			IF SC5->(DbSeek(aPeds[x2][1]+ aPeds[x2][2]))
-				MsgYesNo("Pedido Transferencia gravado com o Filial - "+ SC5->C5_FILIAL + " - Código - " + SC5->C5_NUM + ". Deseja Realizar o Faturamento do pedido? Em caso negativo, o pedido deverá ser faturado utilizando módulo FATURAMENTO.")
-				cFilant := aPeds[x2][1]
-				cFunName := FunName()
-				SetFunName("MATA410")
-				Processa({||Ma410PvNfs("SC5", SC5->(Recno()))},"Gerando a nota fiscal.","Processando aguarde...", .F.)
-				SetFunName(cFunName)
+				lExecNfe:= MsgYesNo("Pedido Transferencia gravado com o Filial - "+ SC5->C5_FILIAL + " - Código - " + SC5->C5_NUM + ". Deseja Realizar o Faturamento do pedido? Em caso negativo, o pedido deverá ser faturado utilizando módulo FATURAMENTO.")
+				If lExecNfe 
+					cFilant := aPeds[x2][1]
+					cFunName := FunName()
+					SetFunName("MATA410")
+					Processa({||Ma410PvNfs("SC5", SC5->(Recno()))},"Gerando a nota fiscal.","Processando aguarde...", .F.)
+					SetFunName(cFunName)
+				EndIf
 			EndIf
 		Next
 		cFilant :=  cFilOld
+
 	EndIf
+
+	
 	// RecLock(cAlias, bInsert)
 
 	// MsUnlock()
@@ -203,14 +220,58 @@ Static Function FATAY035B(oSay)
 Return lRet
 
 Static Function FATAY035A()
-	Local cAliasPrd := GetNextAlias()
-	Local cGrupoFil  := GETMV("MV_YGRFI49")
+	Local cAliasPrd   := GetNextAlias()
+	Local cAliasDados := GetNextAlias()
+	Local cGrupoFil   := GETMV("MV_YGRFI49")
 	Local cGrupo := ""
 
 	cGrupoFil :=  FormatIn(cGrupoFil, ",")
 	cGrupo      := "%"+cGrupoFil+"%"
 
 	BeginSQL Alias cAliasPrd
+
+        SELECT
+            C9_PRODUTO,
+            SUM(C9_QTDLIB) C9_QTDLIB,
+            ROUND(SUM(C9_PRCVEN), 2) C9_PRCVEN,
+            C9_GRUPO,
+            DAK.DAK_TRANSP,
+            DAK.DAK_CAMINH,
+            CASE
+                WHEN C9_GRUPO IN %Exp:cGrupo% THEN '49'
+                ELSE '47'
+            END FILIAL,
+			DAK.DAK_COD AS DAK_COD
+
+        FROM
+            %Table:DAI% DAI
+            INNER JOIN %Table:SC9% SC9 ON SC9.C9_FILIAL = '35'
+            AND SC9.C9_CARGA  = DAI.DAI_COD
+            AND SC9.C9_SEQCAR = DAI.DAI_SEQCAR
+            AND SC9.C9_PEDIDO = DAI.DAI_PEDIDO
+            AND SC9.%NotDel%
+            INNER JOIN %Table:DAK% DAK ON DAK.DAK_FILIAL = DAI.DAI_FILIAL
+            AND DAK.DAK_COD = DAI.DAI_COD
+            AND DAK.%NotDel%
+            INNER JOIN %Table:SF3% SF3 ON SF3.F3_FILIAL = '35'
+            AND SF3.F3_NFISCAL = SC9.C9_NFISCAL
+            AND SF3.F3_SERIE = SC9.C9_SERIENF
+			AND SF3.F3_CODRSEF = '100'
+			AND SF3.%NotDel%
+        WHERE
+            DAI.DAI_FILIAL = %Exp:xFilial("DAI")%
+            AND DAI.DAI_COD = %Exp:DAK->DAK_COD%
+            AND DAI.DAI_SEQCAR = %Exp:DAK->DAK_SEQCAR%
+			AND DAK.DAK_YTRANS <> '1'
+			AND DAI.%NotDel%
+
+        GROUP BY
+            C9_PRODUTO, C9_GRUPO,DAK.DAK_TRANSP,DAK.DAK_CAMINH,DAK.DAK_COD
+        ORDER BY
+            FILIAL,C9_PRODUTO
+	EndSQL
+
+	BeginSQL Alias cAliasDados 
 
         SELECT
             C9_PRODUTO,
@@ -238,16 +299,18 @@ Static Function FATAY035A()
             AND DAK.DAK_COD = DAI.DAI_COD
             AND DAK.%NotDel%
             INNER JOIN %Table:SF3% SF3 ON SF3.F3_FILIAL = '35'
-            AND SF3.F3_NFISCAL = SC9.C9_NFISCAL
-            AND SF3.F3_SERIE = SC9.C9_SERIENF
-            AND SF3.%NotDel%
+			AND SF3.F3_NFISCAL = SC9.C9_NFISCAL
+			AND SF3.F3_SERIE = SC9.C9_SERIENF
+			AND SF3.F3_CODRSEF <> '100'
+			AND DAK.DAK_YTRANS <> '1'
+			AND SF3.%NotDel%
         WHERE
             DAI.DAI_FILIAL = %Exp:xFilial("DAI")%
             AND DAI.DAI_COD = %Exp:DAK->DAK_COD%
             AND DAI.DAI_SEQCAR = %Exp:DAK->DAK_SEQCAR%
 			AND DAI.%NotDel%
         GROUP BY
-            C9_PRODUTO, C9_GRUPO,DAK.DAK_TRANSP,DAK.DAK_CAMINH,SF3.F3_CODRSEF,SF3.F3_NFISCAL,SF3.F3_SERIE
+            C9_PRODUTO, C9_GRUPO,DAK.DAK_TRANSP,DAK.DAK_CAMINH,SF3.F3_CODRSEF,SF3.F3_NFISCAl,SF3.F3_SERIE
         ORDER BY
             FILIAL,C9_PRODUTO
 	EndSQL
@@ -255,19 +318,21 @@ Static Function FATAY035A()
 	DBSelectArea(cAliasPrd)
 
 	While (cAliasPrd)->(!Eof())
-		IF (cAliasPrd)->CODRSEF = '100'
-			aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH})
-		
-		ELSE 
-			IF aScan(aDados,{|x|Alltrim(x[1])==(cAliasPrd)->SERIE .and. Alltrim(x[2])==(cAliasPrd)->NFISCAL}) == 0
-			aadd(aDados,{(cAliasPrd)->SERIE,(cAliasPrd)->NFISCAL})
-			
-			ENDIF
-
-		ENDIF
+		aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH})
 		(cAliasPrd)->(DbSkip())
+	ENDDO
+	
+	DbSelectArea(cAliasDados) 
+
+	While (cAliasDados)->(!Eof())
+			IF aScan(aDados,{|x|Alltrim(x[1])==(cAliasDados)->SERIE .and. Alltrim(x[2])==(cAliasDados)->NFISCAL}) == 0
+			aadd(aDados,{(cAliasDados)->SERIE,(cAliasDados)->NFISCAL})
+			EndIF
+
+		(cAliasDados)->(DbSkip())
 	ENDDO
 
 	(cAliasPrd)->(DBCloseArea())
+	(cAliasDados)->(DBCloseArea())
 
 Return
