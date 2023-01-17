@@ -43,6 +43,7 @@ Static Function FATAY035B(oSay)
 	Local lExecute	 := .F.
 	Local lExecNfe	 := .F.
 	Local cPeds      := ""
+	Local cCarga     := DAK->DAK_COD
 	Private aProds   := {}
 	Private aDados	 := {}
 	Private lMsErroAuto    := .F.
@@ -141,6 +142,8 @@ Static Function FATAY035B(oSay)
 
 					MSExecAuto({|a, b, c, d| MATA410(a, b, c, d)}, aCabec, aItens, nOpcX, .F.)
 					
+					oSay:SetText("Agurande! Gravando informações dos Pedidos a Carga" + cCarga + "...")
+
 					If lMsErroAuto
 						MostraErro()
 						aErroAuto := GetAutoGRLog()
@@ -173,19 +176,22 @@ Static Function FATAY035B(oSay)
 
 
 			End Transaction
+			
+			oSay:SetText("Agurande! Gravando informações dos Pedidos a Carga" + cCarga + "...")
+
+			cFilant :=  cFilOld
 
 			DbSelectArea('DAK')
 			DbSetOrder(1)
-			If DAK->(DbSeek(xFilial( 'DAK' )+(cAliasPrd)->DAK_COD))
-				Reclock("DAK", .F.)
+			If DAK->(DbSeek(xFilial("DAK")+ cCarga))
+				Reclock("DAK",.F.)
 				DAK->DAK_YTRANS := "1"
 				DAK->DAK_YPTRAN := cPeds
 				DAK->(MsUnlock())
 			EndIf
-
-
-			cFilant :=  cFilOld
-			
+		
+		Else 
+			MsgInfo("Rotina de Transferencia  já executada para a carga "+cCarga+". No processo foi gerado os pedidos  de Numero "+ DAK->DAK_YPTRAN, "ATENÇÃO")
 		EndIf
 
 	EndIF
@@ -198,7 +204,7 @@ Static Function FATAY035B(oSay)
 	  
 		For x2 := 1 to Len(aPeds)
 			IF SC5->(DbSeek(aPeds[x2][1]+ aPeds[x2][2]))
-				lExecNfe:= MsgYesNo("Pedido Transferencia gravado com o Filial - "+ SC5->C5_FILIAL + " - Código - " + SC5->C5_NUM + ". Deseja Realizar o Faturamento do pedido? Em caso negativo, o pedido deverá ser faturado utilizando módulo FATURAMENTO.")
+				lExecNfe:= MsgYesNo("Pedido Transferencia gravado com o Filial - "+ SC5->C5_FILIAL + " - Código - " + SC5->C5_NUM + ". Deseja Realizar o Faturamento do pedido?")
 				If lExecNfe 
 					cFilant := aPeds[x2][1]
 					cFunName := FunName()
@@ -318,7 +324,7 @@ Static Function FATAY035A()
 	DBSelectArea(cAliasPrd)
 
 	While (cAliasPrd)->(!Eof())
-		aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH})
+		aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH,(cAliasPrd)->DAK_COD})
 		(cAliasPrd)->(DbSkip())
 	ENDDO
 	
