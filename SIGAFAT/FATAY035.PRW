@@ -123,7 +123,7 @@ Static Function FATAY035B(oSay)
 							aadd(aLinha,{"C6_QTDVEN",   aProds[nY][2],                  Nil})
 							aadd(aLinha,{"C6_PRCVEN",   aProds[nY][3] / aProds[nY][2],  Nil})
 							aadd(aLinha,{"C6_PRUNIT",   aProds[nY][3] / aProds[nY][2],  Nil})
-							aadd(aLinha,{"C6_VALOR",    Round(aProds[nY][3],2),  		Nil})
+							aadd(aLinha,{"C6_VALOR",    ROUND(aProds[nY][3],2),  		Nil})
 							aadd(aLinha,{"C6_LOCAL",    cC6Local ,                      Nil})
 							aAdd(aLinha,{"C6_OPER",     cTpOp,                          Nil})
 							aadd(aItens, aLinha)
@@ -150,7 +150,7 @@ Static Function FATAY035B(oSay)
 
 						FWLogMsg(;
 							"INFO",;        //cSeverity      - Informe a severidade da mensagem de log. As opções possíveis são: INFO, WARN, ERROR, FATAL, DEBUG
-						"LAST",;        //cTransactionId - Informe o Id de identificação da transação para operações correlatas. Informe "LAST" para o sistema assumir o mesmo id anterior
+						"LAST",;        //cTransactionId - Informe o Id de identificação da transação para operações correlatas. Informe "LAST" para o sistema asSUMir o mesmo id anterior
 						"ZCONOUT",;     //cGroup         - Informe o Id do agrupador de mensagem de Log
 						,;              //cCategory      - Informe o Id da categoria da mensagem
 						,;              //cStep          - Informe o Id do passo da mensagem
@@ -247,6 +247,26 @@ Static Function FATAY035A()
                 WHEN C9_GRUPO IN %Exp:cGrupo% THEN '49'
                 ELSE '47'
             END FILIAL,
+			ROUND (
+                SUM(
+                    CASE
+                        WHEN C9_GRUPO IN %Exp:cGrupo% THEN (
+                            SELECT
+                                ROUND(SUM(C9_QTDLIB * B1_CUSTD), 2 )as B1_CUSTD
+                            FROM
+                                %Table:SB1% SB1
+                            WHERE
+                                B1_FILIAL = '49'
+                                AND B1_COD = C9_PRODUTO)
+                        ELSE (
+                            select
+                                ROUND(SUM(C9_QTDLIB * B1_CUSTD), 2 )as B1_CUSTD
+                            FROM
+                                %Table:SB1% SB1
+                            WHERE
+                                B1_FILIAL = '47'
+                                AND B1_COD = C9_PRODUTO)
+                    END ),2 ) CUSTO,
 			DAK.DAK_COD AS DAK_COD
 
         FROM
@@ -263,6 +283,7 @@ Static Function FATAY035A()
             AND SF3.F3_NFISCAL = SC9.C9_NFISCAL
             AND SF3.F3_SERIE = SC9.C9_SERIENF
 			AND SF3.F3_CODRSEF = '100'
+			AND SF3.F3_IDENTFT ='000001'
 			AND SF3.%NotDel%
         WHERE
             DAI.DAI_FILIAL = %Exp:xFilial("DAI")%
@@ -290,13 +311,33 @@ Static Function FATAY035A()
                 WHEN C9_GRUPO IN %Exp:cGrupo% THEN '49'
                 ELSE '47'
             END FILIAL,
+			ROUND (
+                SUM(
+                    CASE
+                        WHEN C9_GRUPO IN %Exp:cGrupo% THEN (
+                            SELECT
+                                ROUND(SUM(C9_QTDLIB * B1_CUSTD), 2 )AS B1_CUSTD
+                            FROM
+                                %Table:SB1% SB1
+                            WHERE
+                                B1_FILIAL = '49'
+                                AND B1_COD = C9_PRODUTO)
+                        ELSE (
+                            select
+                               ROUND(SUM(C9_QTDLIB * B1_CUSTD), 2 )AS B1_CUSTD
+                            FROM
+                                %Table:SB1% SB1
+                            WHERE
+                                B1_FILIAL = '47'
+                                AND B1_COD = C9_PRODUTO)
+                    END ),2 ) CUSTO,
 			SF3.F3_CODRSEF AS CODRSEF,
 			SF3.F3_NFISCAL AS NFISCAL,
 			SF3.F3_SERIE   AS SERIE
 
         FROM
             %Table:DAI% DAI
-            INNER JOIN %Table:SC9% SC9 ON SC9.C9_FILIAL = '35'
+            INNER JOIN %Table:SC9% SC9 ON SC9.C9_FILIAL = '35''
             AND SC9.C9_CARGA  = DAI.DAI_COD
             AND SC9.C9_SEQCAR = DAI.DAI_SEQCAR
             AND SC9.C9_PEDIDO = DAI.DAI_PEDIDO
@@ -324,7 +365,7 @@ Static Function FATAY035A()
 	DBSelectArea(cAliasPrd)
 
 	While (cAliasPrd)->(!Eof())
-		aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->C9_PRCVEN,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH,(cAliasPrd)->DAK_COD})
+		aadd(aProds,{(cAliasPrd)->C9_PRODUTO,(cAliasPrd)->C9_QTDLIB,(cAliasPrd)->CUSTO,(cAliasPrd)->C9_GRUPO,(cAliasPrd)->FILIAL,(cAliasPrd)->DAK_TRANSP,(cAliasPrd)->DAK_CAMINH,(cAliasPrd)->DAK_COD})
 		(cAliasPrd)->(DbSkip())
 	ENDDO
 	
