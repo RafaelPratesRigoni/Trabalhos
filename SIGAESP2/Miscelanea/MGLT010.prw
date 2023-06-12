@@ -801,7 +801,7 @@ Static Function ExcluiSE1(oObj)
 	EndDo
 
 	dbSelectArea(cArqTmp1)
-	cArqTmp1->(dbCloseArea())
+	(cArqTmp1)->(dbCloseArea())
 
 
 	//旼컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
@@ -851,7 +851,7 @@ Static Function ExcluiSE1(oObj)
 	EndDo
 
 	dbSelectArea(cArqTmp3)
-	cArqTmp3->(dbCloseArea())
+	(cArqTmp3)->(dbCloseArea())
 
 
 	If lRetSe1 == .T. .OR. lRetSe2 == .T.

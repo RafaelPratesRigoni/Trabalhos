@@ -56,8 +56,8 @@ User Function MGLT033(xCodMIX,xProd,xObj)
 		MV_PAR01 := xCodMIX
 		mv_par02 := xProd
 		mv_par03 := xProd
-		mv_par04 := "      "
-		mv_par05 := "ZZZZZZ"
+		mv_par04 := "  "
+		mv_par05 := "ZZ"
 		mv_par06 := "      "
 		mv_par07 := "ZZZZZZ"
 
@@ -121,17 +121,17 @@ Static Function MGLT5Exec(oObj)
 	Local nProd
 	Local oTempTable	:= Nil
 	Private _nReg
-	Private cCodMIX := MV_PAR01
+	Private cCodMIX 	:= MV_PAR01
 	Private _cProdDe  	:= mv_par02
 	Private _cProdAte 	:= mv_par03
 	Private _cLojaDe  	:= mv_par04
 	Private _cLojaAte 	:= mv_par05
 	Private _cGrupoDe  	:= mv_par06
 	Private _cGrupoAte 	:= mv_par07
-	Private _cDtIni := ""
-	Private _cDtEmi := ""
+	Private _cDtIni 	:= ""
+	Private _cDtEmi 	:= ""
 	Private _cSeek	    := 	"" //_cAno+_cMes // Pesquisa no Financeiro a Pagar e a Receber
-	Private aStruct := {}
+	Private aStruct 	:= {}
 	Private _nTamFil    := TamSx3("ZLF_FILIAL")[1]
 	Private _nTamLoj    := TamSx3("ZLF_RETILJ")[1]
 	Private _nTamFor    := TamSx3("ZLF_RETIRO")[1]
@@ -390,50 +390,53 @@ Static Function CancFina(oObj)
 			nCont++
 		EndIf
 
-		dbSelectArea("SE1")
-		SE1->(dbSetOrder(1))//E1_FILIAL+E1_PREFIXO+E1_NUM+E1_PARCELA+E1_TIPO
-		If SE1->(dbSeek((cArqTmp1)->E1_FILIAL + (cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO ))
-			// Cancela as Baixas Dos Titulos a receber
-			lRetSe1:=CancBxSe1((cArqTmp1)->E1_FILIAL,(cArqTmp1)->E1_CLIENTE,(cArqTmp1)->E1_LOJA,(cArqTmp1)->E1_PREFIXO,(cArqTmp1)->E1_NUM,(cArqTmp1)->E1_PARCELA,(cArqTmp1)->E1_TIPO,STOD((cArqTmp1)->E5_DATA),(cArqTmp1)->E5_MOTBX,(cArqTmp1)->E5_VALOR,(cArqTmp1)->E5RECNO,(cArqTmp1)->E5_SEQ)
-			If lRetSe1
-				//Atualiza o saldo do titulo na ZLF
-				cSeek := (cArqTmp1)->E1_FILIAL+(cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO+(cArqTmp1)->E1_CLIENTE+(cArqTmp1)->E1_LOJA
-				DbSelectArea("ZLF")
-				DbSetOrder(4)
-				If DbSeek(xFilial("ZLF")+cCodMIX+cSeek)
-					U_GrvZLF(cCodMIX,SE1->E1_L_EVENT,-(SE1->E1_SALDO),cSeek,"","MGLT033","","",0,0,"","",0,0)
+		While (cArqTmp1)->E1_LOJA <= _cLojaAte .And. (cArqTmp1)->E1_LOJA <> "  "
+			dbSelectArea("SE1")
+			SE1->(dbSetOrder(1))//E1_FILIAL+E1_PREFIXO+E1_NUM+E1_PARCELA+E1_TIPO
+			If SE1->(dbSeek((cArqTmp1)->E1_FILIAL + (cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO ))
+				// Cancela as Baixas Dos Titulos a receber
+				lRetSe1:=CancBxSe1((cArqTmp1)->E1_FILIAL,(cArqTmp1)->E1_CLIENTE,(cArqTmp1)->E1_LOJA,(cArqTmp1)->E1_PREFIXO,(cArqTmp1)->E1_NUM,(cArqTmp1)->E1_PARCELA,(cArqTmp1)->E1_TIPO,STOD((cArqTmp1)->E5_DATA),(cArqTmp1)->E5_MOTBX,(cArqTmp1)->E5_VALOR,(cArqTmp1)->E5RECNO,(cArqTmp1)->E5_SEQ)
+				If lRetSe1
+					//Atualiza o saldo do titulo na ZLF
+					cSeek := (cArqTmp1)->E1_FILIAL+(cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO+(cArqTmp1)->E1_CLIENTE+(cArqTmp1)->E1_LOJA
+					DbSelectArea("ZLF")
+					DbSetOrder(4)
+					If DbSeek(xFilial("ZLF")+cCodMIX+cSeek)
+						U_GrvZLF(cCodMIX,SE1->E1_L_EVENT,-(SE1->E1_SALDO),cSeek,"","MGLT033","","",0,0,"","",0,0)
+					EndIf
+
+					//Atualiza no convênio o valor que será pago do mesmo.
+					DbSelectArea("ZLL")
+					DbSetOrder(1)
+					If MsSeek((cArqTmp1)->E1_FILIAL+(cArqTmp1)->E1_NUM)
+						If ZLL->ZLL_EVENTO == SE1->E1_L_EVENT .AND. ZLL->ZLL_RETIRO == (cArqTmp1)->E1_CLIENTE
+							RecLock("ZLL",.F.)
+							ZLL->ZLL_VLRPAG := ZLL->ZLL_VLRPAG - (cArqTmp1)->E5_VALOR
+							If ZLL->ZLL_VLRPAG < 1
+								ZLL->ZLL_STATUS := 'A'
+							Else
+								ZLL->ZLL_STATUS := 'S'
+							ENDIF
+							ZLL->(MsUnLock())
+						EndIf
+					EndIf
+				eLSE
+					Alert("Falha, não cancelou a baixa do titulo: "+(cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO+(cArqTmp1)->E1_CLIENTE+(cArqTmp1)->E1_LOJA )
+					lDeuErro := .t.
 				EndIf
 
-				//Atualiza no convênio o valor que será pago do mesmo.
-				DbSelectArea("ZLL")
-				DbSetOrder(1)
-				If MsSeek((cArqTmp1)->E1_FILIAL+(cArqTmp1)->E1_NUM)
-					If ZLL->ZLL_EVENTO == SE1->E1_L_EVENT .AND. ZLL->ZLL_RETIRO == (cArqTmp1)->E1_CLIENTE
-						RecLock("ZLL",.F.)
-						ZLL->ZLL_VLRPAG := ZLL->ZLL_VLRPAG - (cArqTmp1)->E5_VALOR
-						If ZLL->ZLL_VLRPAG < 1
-							ZLL->ZLL_STATUS := 'A'
-						Else
-							ZLL->ZLL_STATUS := 'S'
-						ENDIF
-						ZLL->(MsUnLock())
-					EndIf
-				EndIf
-			eLSE
-				Alert("Falha, não cancelou a baixa do titulo: "+(cArqTmp1)->E1_PREFIXO + (cArqTmp1)->E1_NUM +(cArqTmp1)->E1_PARCELA + (cArqTmp1)->E1_TIPO+(cArqTmp1)->E1_CLIENTE+(cArqTmp1)->E1_LOJA )
-				lDeuErro := .t.
+			Else
+				xMagHelpFis("ERRO Baixa SE1 - NAO FOI ENCONTRADO TITULO",;
+				"Não foi o encontrado o título mencionado abaixo para realizar o cancelamento de sua baixa, favor comunicar ao departamento de informática.",;
+				"Filial: " + xFilial("SE1") + " - Prefixo: " + (cArqTmp1)->E1_PREFIXO + " - Tipo: " +  (cArqTmp1)->E1_TIPO + " - Numero: " + (cArqTmp1)->E1_NUM +;
+				" - Parcela: " + (cArqTmp1)->E1_PARCELA + " - Fornecedor: " + (cArqTmp1)->E1_CLIENTE+ "/" + (cArqTmp1)->E1_LOJA)
+				lDeuErro  := .T.
 			EndIf
 
-		Else
-			xMagHelpFis("ERRO Baixa SE1 - NAO FOI ENCONTRADO TITULO",;
-			"Não foi o encontrado o título mencionado abaixo para realizar o cancelamento de sua baixa, favor comunicar ao departamento de informática.",;
-			"Filial: " + xFilial("SE1") + " - Prefixo: " + (cArqTmp1)->E1_PREFIXO + " - Tipo: " +  (cArqTmp1)->E1_TIPO + " - Numero: " + (cArqTmp1)->E1_NUM +;
-			" - Parcela: " + (cArqTmp1)->E1_PARCELA + " - Fornecedor: " + (cArqTmp1)->E1_CLIENTE+ "/" + (cArqTmp1)->E1_LOJA)
-			lDeuErro  := .T.
-		EndIf
+			(cArqTmp1)->(DbSkip())
+		EndDo
 
 		(cArqTmp1)->(DbSkip())
-
 	EndDo
 
 	dbSelectArea(cArqTmp1)
@@ -490,7 +493,6 @@ Static Function CancFina(oObj)
 		EndIf
 
 		(cArqTmp2)->(DbSkip())
-
 	EndDo
 
 	dbSelectArea(cArqTmp2)

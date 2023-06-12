@@ -139,7 +139,7 @@ Static Function FechFin(oObj)
 	Private _cGrpDe    := mv_par04
 	Private _cGrpAte   := mv_par05
 	Private _cLojaDe   := mv_par06
-	Private _cLojaAte  := mv_par06
+	Private _cLojaAte  := mv_par07
 	Private _cSetor    := ""
 	Private _dDtBaixa  := dDataBase
 	Private _cMaxEmis  := "" //DTOS(LASTDAY(ADDMES(DDATABASE,-1)))
@@ -451,12 +451,28 @@ Static Function ActFin(oObj)
 						If MsSeek((cArqTmp2)->FILIAL+(cArqTmp2)->NUM)
 							RecLock("ZLL",.F.)
 							ZLL->ZLL_VLRPAG := _nVlrZLL
+							
 							If ZLL->ZLL_VALOR == _nVlrZLL
 								ZLL->ZLL_STATUS := 'P'
 							Else
 								ZLL->ZLL_STATUS := 'S'
 							ENDIF
-							ZLL->(MsUnLock())
+							//Atualiza o Valor da Taxa Administrativa
+							If ZLL->ZLL_CONVEN =='138503'
+								ZLL->ZLL_TXADM := Round(ZLL->ZLL_VLRPAG * (2/100),2)
+								ZLL->(MsUnLock())
+							EndIf
+							// Atualiza o valor de pagamento e taxa no cabeçalho
+							DbSelectArea("ZLK")
+							DbSetOrder(1)
+							If ZLK->(dbSeek(ZLL->ZLL_FILIAL+ZLL->ZLL_COD))
+								RecLock("ZLK", .F.)
+									ZLK->ZLK_VLRPAG := ZLK->ZLK_VLRPAG + ZLL->ZLL_VLRPAG
+									IF ZLK->ZLK_TXADM > 0
+										ZLK->ZLK_TXADM := Round(ZLK->ZLK_VLRPAG * (2/100),2) 
+									ENDIF
+								ZLK->(MsUnlock())
+							EndIf
 						EndIf
 					EndIf
 				EndIf
@@ -478,9 +494,10 @@ Static Function ActFin(oObj)
 				If _nSldCred > 0
 					IF  SE1->E1_FILIAL = '47' .AND. SE1->E1_PREFIXO = 'VEZ' .AND. SE1->E1_TIPO = 'INT'
 						nJurTit := 0
+						_nMulta := 0
 						
 					ELSE 
-						If SE1->E1_VENCREA < _dDtBaixa //.and. SE1->E1_L_EVENT <> '100001' //Titulos com evento de Capital não podem ter cobrança de juros.
+						If SE1->E1_VENCREA < _dDtBaixa .and. SE1->E1_L_EVENT <> '100001' //Titulos com evento de Capital não podem ter cobrança de juros.
 							_dBkpDtBa := dDataBase
 							dDataBase := _dDtBaixa
 							nJurTit := fa070Juros()
@@ -509,7 +526,7 @@ Static Function ActFin(oObj)
 						_nSldCred -= nSldTit
 
 						_dBkpDtBa := dDataBase
-						//Baixa o DŽbito do Cooperado
+						//Baixa o Debito do Cooperado
 						_lBaixou:= U_BaixaSE1(nVlrBx,SE1->E1_PREFIXO,SE1->E1_NUM,SE1->E1_PARCELA,SE1->E1_TIPO,SE1->E1_CLIENTE,SE1->E1_LOJA,_cMotBaixa,_cHistBaixa,SE1->E1_L_EVENT,"","","",.T.,SE1->E1_FILIAL,_dDtBaixa,cCodMix)
 
 						dDataBase := _dBkpDtBa
@@ -519,7 +536,7 @@ Static Function ActFin(oObj)
 
 						EndIf
 
-						//Armazena Valor da Baixa do T’tulo Pai
+						//Armazena Valor da Baixa do Titulo Pai
 						nTotBai += nVlrBx
 					Else
 						nVlrBx := _nSldCred
@@ -932,10 +949,10 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 			cQry += " AND A2_FILIAL = '" + xFilial("SA2") + "'"
 			cQry += " AND A2_L_TPFOR = 'P'" //Produtor Cooperado
 			cQry += " AND A2_COD     BETWEEN '" + _cProdDe +"' AND '"+ _cProdAte +"'"
-//			cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
-			If !Empty(_cLojaaut)
-				cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
-			EndIf
+			cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
+			//If !Empty(_cLojaaut)
+			//	cQry += " AND A2_LOJA    BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
+			//EndIf
 			cQry += " AND A2_L_LI_RO BETWEEN '" + _cGrpDe + "' AND '" + _cGrpAte + "' "
 
 			cQry += " ORDER BY A2_COD "
@@ -1002,12 +1019,13 @@ Static Function MGLTQRY(cOpc,cPrefSE2)
 			cQry += ",E1_VENCTO AS VENCTO,E1_VALOR AS VLRORI, E1_SALDO AS SALDO , E1_ACRESC AS ACRESC, E1_DECRESC AS DECRESC, E1_SDACRES AS SDACRES , E1_SDDECRE AS SDDECRE,E1_L_EVENT AS EVENTO, E1_HIST AS HIST  "
 			cQry += ", SE1.R_E_C_N_O_, ZL8.ZL8_PRIORI AS PRIORIDADE " //Inclusao de prioridade seguindo ordem definida no cadastro de eventos.
 			cQry += " FROM " + RetSqlName("SE1") + " SE1 "
-			cQry += "			JOIN " + RetSqlName("ZL8") + " ZL8 ON ZL8.ZL8_COD = SE1.E1_L_EVENT AND ZL8.D_E_L_E_T_ = ' ' "
-			cQry += " 			JOIN " + RetSqlName("SA2") + " A2 ON A2.A2_COD = SE1.E1_CLIENTE AND A2.D_E_L_E_T_ = ' ' " //AND A2.A2_LOJA = SE1.E1_LOJA
+			cQry += " JOIN " + RetSqlName("ZL8") + " ZL8 ON ZL8.ZL8_COD = SE1.E1_L_EVENT AND ZL8.D_E_L_E_T_ = ' ' "
+			cQry += " JOIN " + RetSqlName("SA1") + " A1  ON A1.A1_COD = SE1.e1_cliente AND  A1.A1_LOJA = SE1.E1_LOJA  AND A1.d_e_l_e_t_ = ' '" 
+			cQry += " JOIN " + RetSqlName("SA2") + " A2  ON A2.A2_YCODCLI = A1.A1_YCODFOR  AND A2.A2_YLOJCLI = A1.A1_YLOJFOR AND A2.D_E_L_E_T_ = ' '" //AND A2.A2_LOJA = SE1.E1_LOJA
 			cQry += " WHERE "
 			cQry += " E1_FILIAL  	BETWEEN '    ' AND 'ZZZZ'"
-			cQry += " AND E1_CLIENTE  	=  '" + SA2->A2_COD + "' "
-			// cQry += " AND E1_LOJA    	 BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
+			cQry += " AND A2_YCODCLI 	=  '" + SA2->A2_COD + "' "
+			cQry += " AND A2_YLOJCLI 	 BETWEEN '" + _cLojaDe +"' AND '"+ _cLojaAte +"'"
 			cQry += " AND E1_VENCTO 	<= '"  + _cVencto  + "'"
 			cQry += " AND E1_TIPO <> 'NCC' "
 			cQry += " AND E1_SALDO 		> 0 "

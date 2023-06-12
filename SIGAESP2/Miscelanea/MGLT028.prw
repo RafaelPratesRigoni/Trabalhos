@@ -425,7 +425,7 @@ If SE1->(dbSeek(xFILIAL("SE1")+cPrefixo+cNroTit+cParcela+cTipo))
 
 	If dDataBase > SE1->E1_VENCREA
 		If !Empty(GetMv("MV_LJMULTA")) //Tratamento cálculo automático de multa
-			If SE1->E1_MULTA == 0
+			If SE1->E1_MULTA == 0 .AND. SE1->E1_L_EVENT <>'100001' // Calcula apenas para titulos diferentes de Capital  Evento '100001'
 				_nMulta := SE1->E1_VALOR * (GetMv("MV_LJMULTA") / 100)
 			EndIf
 		EndIf
